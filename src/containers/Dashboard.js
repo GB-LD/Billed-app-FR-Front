@@ -146,8 +146,12 @@ export default class {
     }
 
     bills.forEach(bill => {
-      $(`#open-bill${bill.id}`).click((e) => this.handleEditTicket(e, bill, bills))
+      // Pour chaque facture dans le tableau "bills"
+      // Sélectionne chaque élément HTML ayant un ID dynamique
+      // Construit l'ID en utilisant l'indice "index" actuel et l'identifiant unique de la facture
+      $(`#status-bills-container${this.index} #open-bill${bill.id}`).click((e) => this.handleEditTicket(e, bill, bills));
     })
+    
 
     return bills
 
