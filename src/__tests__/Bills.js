@@ -2,15 +2,17 @@
  * @jest-environment jsdom
  */
 
-import {screen, waitFor } from "@testing-library/dom"
+import {screen, waitFor} from "@testing-library/dom"
+import userEvent from "@testing-library/user-event";
+import { ROUTES_PATH, ROUTES } from "../constants/routes.js";
+import { localStorageMock } from "../__mocks__/localStorage.js";
+import mockStore from "../__mocks__/store"
 import BillsUI from "../views/BillsUI.js"
 import { bills } from "../fixtures/bills.js"
-import { ROUTES_PATH, ROUTES } from "../constants/routes.js";
-import {localStorageMock} from "../__mocks__/localStorage.js";
+import router from "../app/Router"
 import Bills from "../containers/Bills.js";
-import userEvent from "@testing-library/user-event";
 
-import router from "../app/Router.js";
+jest.mock("../app/Store", () => mockStore)
 
 // Test du composant views/BillsUI.js
 describe("Given I am connected as an employee", () => {
@@ -207,3 +209,91 @@ describe("Given I am connected as Employee and I am on Bill page, there are bill
 		});
 	});
 });
+
+// test d'intégration GET
+describe("Given I am a user connected as Employee", () => {
+
+	describe("When I navigate to Bills", () => {
+
+		test("fetches bills from mock API GET", async () => {
+			// Configuration de l'utilisateur connecté comme employé dans le localStorage.
+			localStorage.setItem("user", JSON.stringify({ type: "Employee" }));
+
+			// Création d'un élément div pour servir de racine à l'application.
+			const root = document.createElement("div");
+			root.setAttribute("id", "root");
+			document.body.append(root);
+
+			// Initialisation du router de l'application.
+			router();
+
+			// Navigation vers la page des factures.
+			window.onNavigate(ROUTES_PATH.Bills);
+
+			// Attente que le texte "Mes notes de frais" soit affiché à l'écran.
+			await waitFor(() => screen.getByText("Mes notes de frais"));
+
+			// Vérification que le bouton "Nouvelle note de frais" est présent à l'écran.
+			expect(screen.getByTestId("btn-new-bill")).toBeTruthy();
+		})
+
+		// Ce bloc de test décrit le comportement lorsqu'une erreur survient lors de l'appel à l'API.
+		describe("When an error occurs on API", () => {
+			// Avant chaque test, on espionne la méthode mockée bills du store et on configure le localStorage pour un utilisateur connecté en tant qu'employé.
+			beforeEach(() => {
+				jest.spyOn(mockStore, "bills");
+				Object.defineProperty(
+					window,
+					'localStorage',
+					{ value: localStorageMock }
+				);
+				window.localStorage.setItem('user', JSON.stringify({
+					type: 'Employee'
+				}));
+				const root = document.createElement("div");
+				root.setAttribute("id", "root");
+				document.body.appendChild(root);
+				router();
+			});
+
+			// Ce test vérifie que lorsque l'API renvoie une erreur 404, un message d'erreur approprié est affiché à l'écran.
+			test("fetches bills from an API and fails with 404 message error", async () => {
+				// Mock de la méthode list du store pour rejeter la promesse avec une erreur 404.
+				mockStore.bills.mockImplementationOnce(() => {
+					return {
+						list: () => {
+							return Promise.reject(new Error("Erreur 404"));
+						}
+					};
+				});
+				// Navigation vers la page des factures.
+				window.onNavigate(ROUTES_PATH.Bills);
+				await new Promise(process.nextTick);
+				// Attente et récupération du message d'erreur affiché à l'écran.
+				const message = await screen.getByText(/Erreur 404/);
+				// Vérification que le message d'erreur est présent à l'écran.
+				expect(message).toBeTruthy();
+			});
+
+			// Ce test vérifie que lorsque l'API renvoie une erreur 500, un message d'erreur approprié est affiché à l'écran.
+			test("fetches messages from an API and fails with 500 message error", async () => {
+				// Mock de la méthode list du store pour rejeter la promesse avec une erreur 500.
+				mockStore.bills.mockImplementationOnce(() => {
+					return {
+						list: () => {
+							return Promise.reject(new Error("Erreur 500"));
+						}
+					};
+				});
+				// Navigation vers la page des factures.
+				window.onNavigate(ROUTES_PATH.Bills);
+				await new Promise(process.nextTick);
+				// Attente et récupération du message d'erreur affiché à l'écran.
+				const message = await screen.getByText(/Erreur 500/);
+				// Vérification que le message d'erreur est présent à l'écran.
+				expect(message).toBeTruthy();
+			});
+		});
+	});
+});
+
