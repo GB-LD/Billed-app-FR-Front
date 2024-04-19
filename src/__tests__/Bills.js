@@ -2,17 +2,17 @@
  * @jest-environment jsdom
  */
 
-import {screen, waitFor} from "@testing-library/dom"
+import {screen, waitFor } from "@testing-library/dom"
 import BillsUI from "../views/BillsUI.js"
 import { bills } from "../fixtures/bills.js"
-import { ROUTES_PATH} from "../constants/routes.js";
+import { ROUTES_PATH, ROUTES } from "../constants/routes.js";
 import {localStorageMock} from "../__mocks__/localStorage.js";
 import Bills from "../containers/Bills.js";
 import userEvent from "@testing-library/user-event";
 
 import router from "../app/Router.js";
 
-// UI testing for the employee page
+// Test du composant views/BillsUI.js
 describe("Given I am connected as an employee", () => {
 
   describe("When I am on Bills Page", () => {
@@ -111,6 +111,46 @@ describe("Given I am connected as an employee", () => {
   })
 })
 
+// Test du composant containers/Bills.js
+describe("Given I am connected as Employee and I am on Bill page, there are a newBill button", () => {
+
+	describe("When clicking on newBill button", () => {
+
+		test("Then, bill form should open", () => {
+			// Configuration de l'utilisateur connecté comme employé
+			Object.defineProperty(window, 'localStorage', { value: localStorageMock })
+			window.localStorage.setItem('user', JSON.stringify({
+			  type: 'Employee'
+			}))
+
+			// Création de l'HTML de BillsUI avec les données des notes de frais et injection dans le corps du document
+			document.body.innerHTML = BillsUI({ data: bills })
+
+			// Configuration des paramètres nécessaires à l'instanciation de Bills
+			const onNavigate = (pathname) => {
+				document.body.innerHTML = ROUTES({ pathname });
+			};
+			
+			const store = null;
+			const bill = new Bills({
+				document,
+				onNavigate,
+				store,
+				localStorage: window.localStorage,
+			});
+
+			// Simulation du click sur le bouton newBill
+			const handleClickNewBill = jest.fn(() => bill.handleClickNewBill());
+			screen.getByTestId("btn-new-bill").addEventListener("click", handleClickNewBill);
+			userEvent.click(screen.getByTestId("btn-new-bill"));
+
+			// Vérification que le formulaire de création de note de frais s'ouvre
+			expect(handleClickNewBill).toHaveBeenCalled();
+			expect(screen.getByText("Envoyer une note de frais")).toBeTruthy();
+		});
+	});
+});
+
 describe("Given I am connected as Employee and I am on Bill page, there are bills", () => {
 
 	describe("When clicking on an eye icon", () => {
@@ -142,35 +182,26 @@ describe("Given I am connected as Employee and I am on Bill page, there are bill
 
 			// Sélectionne l'élément avec l'ID "modaleFile" dans le document
 			const modale = document.querySelector("#modaleFile");
-
 			// Étend la fonction modal de jQuery pour simuler l'ouverture de la modale
 			// Lorsque cette fonction est appelée, elle ajoute la classe "show" à l'élément modal
 			$.fn.modal = jest.fn(() => modale.classList.add("show"));
 
 			// Sélectionne le premier élément avec l'attribut data-testid="icon-eye"
 			const eye = screen.getAllByTestId("icon-eye")[0];
-
 			// Crée une fonction de egstion d'événements qui appelle handleClickIconEye de l'objet bill avec l'élément eye
 			const handleClickIconEye = jest.fn(bill.handleClickIconEye(eye));
-
-			// Ajoute un écouteur d'événements pour le clic sur l'élément eye,
-			// qui déclenchera la fonction handleClickIconEye
+			// Ajoute un écouteur d'événements pour le clic sur l'élément eye, qui déclenchera la fonction handleClickIconEye
 			eye.addEventListener("click", handleClickIconEye);
-
 			// Simule un clic sur l'élément eye
 			userEvent.click(eye);
 
 			// Vérification que la modale s'ouvre avec les bonnes données
-
 			// Vérifie que handleClickIconEye a été appelé au moins une fois
 			expect(handleClickIconEye).toHaveBeenCalled();
-
 			// Vérifie que la classe "show" a été ajoutée à l'élément modal, indiquant qu'il est affiché
 			expect(modale.classList).toContain("show");
-
 			// Vérifie qu'il existe un élément contenant le texte "Justificatif" dans le document
 			expect(screen.getByText("Justificatif")).toBeTruthy();
-
 			// Vérifie que la propriété fileUrl du premier élément de bills est définie et non null
 			expect(bills[0].fileUrl).toBeTruthy();
 		});

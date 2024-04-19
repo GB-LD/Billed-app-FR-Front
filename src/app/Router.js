@@ -37,7 +37,7 @@ export default () => {
         const divIcon2 = document.getElementById('layout-icon2')
         divIcon1.classList.add('active-icon')
         divIcon2.classList.remove('active-icon')
-        //new Bills({ document, onNavigate, store, localStorage })
+        new Bills({ document, onNavigate, store, localStorage })
       }).catch(error => {
         rootDiv.innerHTML = ROUTES({ pathname, error })
       })
